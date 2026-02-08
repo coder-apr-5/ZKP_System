@@ -15,6 +15,7 @@ export default function Home() {
           <Link href="/issuer" className="text-sm font-medium hover:text-indigo-600">Issuer</Link>
           <Link href="/wallet" className="text-sm font-medium hover:text-indigo-600">Wallet</Link>
           <Link href="/verify/global" className="text-sm font-medium hover:text-indigo-600">Verifier</Link>
+          <Link href="/benchmarks" className="text-sm font-medium hover:text-indigo-600">Benchmarks</Link>
         </nav>
       </header>
 

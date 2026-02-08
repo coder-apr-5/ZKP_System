@@ -14,6 +14,16 @@ router = APIRouter()
 
 @router.post("/init", response_model=InitIssuerResponse)
 async def init_issuer(req: InitIssuerRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Initialize a new issuer with a fresh key pair.
+    
+    Args:
+        req (InitIssuerRequest): The initialization request containing issuer name.
+        db (AsyncSession): Database session.
+        
+    Returns:
+        InitIssuerResponse: The public key and ID of the new issuer.
+    """
     pk, sk = BbsMock.generate_keys()
     
     issuer = IssuerKey(
@@ -30,6 +40,17 @@ async def init_issuer(req: InitIssuerRequest, db: AsyncSession = Depends(get_db)
 
 @router.post("/issue", response_model=IssueResponse)
 async def issue_credential(req: IssueRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Issue a verifiable credential containing the provided attributes.
+    Signs the attributes using the latest issuer's private key.
+    
+    Args:
+        req (IssueRequest): The attributes to sign.
+        db (AsyncSession): Database session.
+        
+    Returns:
+        IssueResponse: The credential containing the signature and attributes.
+    """
     result = await db.execute(select(IssuerKey).order_by(IssuerKey.created_at.desc()))
     issuer = result.scalars().first()
     
@@ -66,6 +87,12 @@ async def issue_credential(req: IssueRequest, db: AsyncSession = Depends(get_db)
 
 @router.get("/public-key")
 async def get_public_key(db: AsyncSession = Depends(get_db)):
+    """
+    Retrieve the current active issuer's public key.
+    
+    Returns:
+        dict: The public key.
+    """
     result = await db.execute(select(IssuerKey).order_by(IssuerKey.created_at.desc()))
     issuer = result.scalars().first()
     if not issuer:
@@ -74,6 +101,12 @@ async def get_public_key(db: AsyncSession = Depends(get_db)):
 
 @router.get("/stats")
 async def get_stats(db: AsyncSession = Depends(get_db)):
+    """
+    Get issuance statistics.
+    
+    Returns:
+        dict: Total issued credentials and active count.
+    """
     total_issued = await db.execute(select(func.count(IssuedCredential.id)))
     count = total_issued.scalar()
     # Active would require revocation logic, for now assume all active

@@ -15,6 +15,32 @@ router = APIRouter()
 
 @router.post("/request", response_model=VerifyRequestResponse)
 async def create_verification_request(req: VerifyRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Create a new verification request with a specific predicate.
+    
+    Args:
+        req (VerifyRequest): Request details including verifier ID and predicate.
+        db (AsyncSession): Database session.
+    
+    Returns:
+        VerifyRequestResponse: The request ID and QR code data.
+    """
+    # Basic validation
+    if not req.predicate:
+         raise HTTPException(status_code=400, detail="Predicate cannot be empty")
+         
+    # Optional: If predicate is JSON, validate structure
+    if req.predicate.strip().startswith("{"):
+        import json
+        from crypto.predicate_eval import PredicateEvaluator
+        try:
+            pred_obj = json.loads(req.predicate)
+            PredicateEvaluator.validate(pred_obj)
+        except Exception as e:
+            # For now, log warning but don't hard fail if we want to support legacy string predicates
+            # or fail if we want strict mode. 
+            pass 
+
     request = VerificationRequest(
         id=str(uuid.uuid4()),
         verifier_id=req.verifierId,
@@ -33,6 +59,19 @@ async def create_verification_request(req: VerifyRequest, db: AsyncSession = Dep
 
 @router.post("/submit", response_model=SubmitProofResponse)
 async def submit_proof(req: SubmitProofRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Submit a zero-knowledge proof for verification.
+    
+    Args:
+        req (SubmitProofRequest): The proof, revealed attributes, and context.
+        db (AsyncSession): Database session.
+        
+    Returns:
+        SubmitProofResponse: Whether the proof was valid and the verification ID.
+        
+    Raises:
+        HTTPException: If the request ID is invalid.
+    """
     # Check if request exists
     request_res = await db.execute(select(VerificationRequest).where(VerificationRequest.id == req.requestId))
     request = request_res.scalars().first()
@@ -60,6 +99,19 @@ async def submit_proof(req: SubmitProofRequest, db: AsyncSession = Depends(get_d
 
 @router.get("/result/{request_id}", response_model=VerificationStatusResponse)
 async def get_verification_result(request_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Get the status of a specific verification request.
+    
+    Args:
+        request_id (str): The ID of the verification request.
+        db (AsyncSession): Database session.
+        
+    Returns:
+        VerificationStatusResponse: The status and result of the verification.
+        
+    Raises:
+        HTTPException: If the result is not found.
+    """
     # Join Request and Result
     query = select(VerificationResult, VerificationRequest.predicate).join(
         VerificationRequest, VerificationResult.request_id == VerificationRequest.id
@@ -81,6 +133,15 @@ async def get_verification_result(request_id: str, db: AsyncSession = Depends(ge
 
 @router.get("/audit-log", response_model=AuditLogResponse)
 async def get_audit_log(db: AsyncSession = Depends(get_db)):
+    """
+    Retrieve the audit log of recent verifications.
+    
+    Args:
+        db (AsyncSession): Database session.
+        
+    Returns:
+        AuditLogResponse: List of recent verification results.
+    """
     query = select(VerificationResult, VerificationRequest.predicate).join(
         VerificationRequest, VerificationResult.request_id == VerificationRequest.id
     ).order_by(VerificationResult.verified_at.desc()).limit(50)

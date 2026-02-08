@@ -7,6 +7,56 @@ class PredicateEvaluator:
     """
     
     @staticmethod
+    def validate(predicate: dict) -> bool:
+        """
+        Validate the structure of a predicate object.
+        Returns True if valid, raises ValueError if invalid.
+        """
+        if not isinstance(predicate, dict):
+            raise ValueError("Predicate must be a dictionary")
+            
+        p_type = predicate.get("type", "").upper()
+        if not p_type:
+            raise ValueError("Predicate must have a 'type'")
+            
+        valid_types = {"AND", "OR", "NOT", "EQUAL", "NOT_EQUAL", "GREATER_THAN", 
+                       "LESS_THAN", "GREATER_EQUAL", "LESS_EQUAL", "BETWEEN", "IN", "NOT_IN"}
+                       
+        if p_type not in valid_types:
+            raise ValueError(f"Unknown predicate type: {p_type}")
+            
+        if p_type in ["AND", "OR"]:
+            sub_preds = predicate.get("predicates")
+            if not isinstance(sub_preds, list):
+                raise ValueError(f"{p_type} requires 'predicates' list")
+            for sub in sub_preds:
+                PredicateEvaluator.validate(sub)
+            return True
+            
+        if p_type == "NOT":
+            sub = predicate.get("predicate")
+            if not sub:
+                raise ValueError("NOT requires 'predicate' object")
+            PredicateEvaluator.validate(sub)
+            return True
+            
+        # Leaf nodes
+        if "attribute" not in predicate:
+            raise ValueError(f"{p_type} requires 'attribute'")
+            
+        if p_type == "BETWEEN":
+            if "min" not in predicate or "max" not in predicate:
+                raise ValueError("BETWEEN requires 'min' and 'max'")
+        elif p_type in ["IN", "NOT_IN"]:
+            if "value" not in predicate or not isinstance(predicate["value"], list):
+                raise ValueError(f"{p_type} requires 'value' list")
+        else:
+            if "value" not in predicate:
+                raise ValueError(f"{p_type} requires 'value'")
+                
+        return True
+
+    @staticmethod
     def evaluate(predicate: dict, attributes: dict) -> bool:
         """
         Evaluate a predicate object against attributes.

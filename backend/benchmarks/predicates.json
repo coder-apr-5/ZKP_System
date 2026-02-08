@@ -1,0 +1,19 @@
+[
+  {
+    "type": "LESS_EQUAL",
+    "attribute": "birthdate",
+    "value": "2004-02-08" 
+  },
+  {
+    "type": "GREATER_EQUAL",
+    "attribute": "age",
+    "value": 21 
+  },
+  {
+      "type": "AND",
+      "predicates": [
+        { "type": "GREATER_EQUAL", "attribute": "age", "value": 21 },
+        { "type": "IN", "attribute": "state", "value": ["CA", "NY"] }
+      ]
+  }
+]
