@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.db import engine, Base
-from issuer.api import router as issuer_router
-from verifier.api import router as verifier_router
+from api.hospital.routes import router as hospital_router
+from api.provider.routes import router as provider_router
 
-app = FastAPI(title="ZKP Credential System", version="1.0.0")
+app = FastAPI(title="MediGuard | Healthcare Privacy Protocol", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,8 +19,9 @@ async def startup_db_client():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-app.include_router(issuer_router, prefix="/api/issuer", tags=["Issuer"])
-app.include_router(verifier_router, prefix="/api/verify", tags=["Verifier"])
+# MediGuard API Routes
+app.include_router(hospital_router, prefix="/api/hospital", tags=["Hospital (Issuer)"])
+app.include_router(provider_router, prefix="/api/provider", tags=["Provider (Verifier)"])
 
 @app.get("/")
 def home():

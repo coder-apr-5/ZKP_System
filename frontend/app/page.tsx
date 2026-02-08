@@ -1,97 +1,114 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ShieldCheck, UserCheck, Smartphone, ExternalLink } from "lucide-react";
+import { ShieldCheck, Activity, Database, Lock, Smartphone, CheckCircle } from "lucide-react";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-50 dark:bg-neutral-900">
-      <header className="px-6 py-4 flex items-center justify-between border-b bg-white dark:bg-neutral-950">
-        <div className="flex items-center space-x-2">
-          <ShieldCheck className="w-8 h-8 text-indigo-600" />
-          <h1 className="text-xl font-bold tracking-tight">ZKP Verifier</h1>
+    <div className="flex flex-col min-h-screen bg-neutral-50 dark:bg-neutral-900 font-sans">
+      <header className="px-6 py-4 flex items-center justify-between bg-white dark:bg-neutral-950 border-b relative z-10 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="bg-primary/10 p-2 rounded-full">
+            <ShieldCheck className="w-6 h-6 text-primary" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white">MediGuard</span>
         </div>
-        <nav className="flex space-x-4">
-          <Link href="/issuer" className="text-sm font-medium hover:text-indigo-600">Issuer</Link>
-          <Link href="/wallet" className="text-sm font-medium hover:text-indigo-600">Wallet</Link>
-          <Link href="/verify/global" className="text-sm font-medium hover:text-indigo-600">Verifier</Link>
-          <Link href="/benchmarks" className="text-sm font-medium hover:text-indigo-600">Benchmarks</Link>
+        <nav className="hidden md:flex items-center gap-6">
+          <Link href="/hospital" className="text-sm font-medium hover:text-primary transition-colors">Hospital Portal</Link>
+          <Link href="/wallet" className="text-sm font-medium hover:text-primary transition-colors">Patient Wallet</Link>
+          <Link href="/verify/global" className="text-sm font-medium hover:text-primary transition-colors">Provider Login</Link>
+          <Link href="/benchmarks" className="text-sm font-medium hover:text-primary transition-colors">Benchmarks</Link>
         </nav>
+        <div className="flex gap-3">
+          <Link href="/demo">
+            <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">Live Demo</Button>
+          </Link>
+          <Link href="/wallet">
+            <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25">Get Wallet</Button>
+          </Link>
+        </div>
       </header>
 
-      <main className="flex-1 container mx-auto px-4 py-12">
-        <section className="text-center mb-16">
-          <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            Privacy-Preserving Attribute Verification
-          </h2>
-          <p className="text-lg text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto mb-8">
-            Prove specific attributes (like age or membership) without revealing your full identity.
-            Powered by Zero-Knowledge Proofs and BBS+ signatures.
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative px-6 py-20 md:py-32 flex flex-col items-center text-center max-w-5xl mx-auto">
+          <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))] dark:bg-grid-slate-700/25 dark:[mask-image:linear-gradient(0deg,rgba(255,255,255,0.1),rgba(255,255,255,0.5))]" style={{ zIndex: -1 }}></div>
+
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6 animate-fade-in-up">
+            <Activity className="w-4 h-4" />
+            <span>Protecting Patient Privacy in India</span>
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-neutral-900 dark:text-white mb-6 leading-tight">
+            Verify Health. <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-emerald-400">Protect Privacy.</span>
+          </h1>
+
+          <p className="text-xl text-neutral-600 dark:text-neutral-300 max-w-2xl mb-10 leading-relaxed">
+            MediGuard is a zero-knowledge proof credential system that allows patients to prove medical eligibility without revealing sensitive health data.
           </p>
-          <div className="flex justify-center gap-4">
-            <Link href="/demo">
-              <Button size="lg" className="rounded-full px-8">Start Demo</Button>
+
+          <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+            <Link href="/wallet">
+              <Button size="lg" className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/30 w-full sm:w-auto">
+                Launch Patient Wallet
+              </Button>
             </Link>
-            <Link href="https://github.com/google-deepmind/zkp-system" target="_blank">
-              <Button variant="outline" size="lg" className="rounded-full px-8 gap-2">
-                GitHub <ExternalLink className="w-4 h-4" />
+            <Link href="/hospital/issue">
+              <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-2 w-full sm:w-auto">
+                Issue Credential (Hospital)
               </Button>
             </Link>
           </div>
         </section>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <Link href="/issuer" className="group">
-            <Card className="h-full transition-all hover:shadow-lg hover:border-indigo-200">
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-indigo-50 flex items-center justify-center mb-4 group-hover:bg-indigo-100 transition-colors">
-                  <UserCheck className="w-6 h-6 text-indigo-600" />
-                </div>
-                <CardTitle>Issuer Portal</CardTitle>
-                <CardDescription>Issue verifiable credentials to users.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-500">
-                  Generate BBS+ signed credentials containing user attributes like Name, Age, and Membership Level.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+        {/* Features Section */}
+        <section className="px-6 py-20 bg-white dark:bg-neutral-950">
+          <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-12">
+            <div className="flex flex-col gap-4 p-6 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                <Database className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold">Unlinkable Verification</h3>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                Every verification generates a unique proof. Pharmacies and insurers cannot track your activity across different providers.
+              </p>
+            </div>
 
-          <Link href="/wallet" className="group">
-            <Card className="h-full transition-all hover:shadow-lg hover:border-purple-200">
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-purple-50 flex items-center justify-center mb-4 group-hover:bg-purple-100 transition-colors">
-                  <Smartphone className="w-6 h-6 text-purple-600" />
-                </div>
-                <CardTitle>Holder Wallet</CardTitle>
-                <CardDescription>Manage and prove your attributes.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-500">
-                  Store credentials securely and generate zero-knowledge proofs for specific verification requests.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+            <div className="flex flex-col gap-4 p-6 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
+              <div className="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-primary">
+                <Lock className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold">Selective Disclosure</h3>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                Prove you are vaccinated without revealing the manufacturer, date, or hospital. Share only what is strictly necessary.
+              </p>
+            </div>
 
-          <Link href="/verify/bar" className="group">
-            <Card className="h-full transition-all hover:shadow-lg hover:border-pink-200">
-              <CardHeader>
-                <div className="w-12 h-12 rounded-lg bg-pink-50 flex items-center justify-center mb-4 group-hover:bg-pink-100 transition-colors">
-                  <ShieldCheck className="w-6 h-6 text-pink-600" />
-                </div>
-                <CardTitle>Verifier Interface</CardTitle>
-                <CardDescription>Verify proofs without seeing raw data.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-neutral-500">
-                  Request proofs (e.g., "Over 18") and verify them cryptographically without learning the actual age.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
+            <div className="flex flex-col gap-4 p-6 rounded-2xl bg-neutral-50 dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800">
+              <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <h3 className="text-xl font-bold">Offline-First PWA</h3>
+              <p className="text-neutral-600 dark:text-neutral-400">
+                Works on any smartphone. Credentials act like digital cards in your pocket, accessible even without internet.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Tech Stack Footer */}
+        <footer className="py-12 px-6 border-t bg-neutral-50 dark:bg-neutral-900 text-center">
+          <div className="flex justify-center gap-8 mb-6 text-neutral-400">
+            <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4" /> BBS+ Signatures</span>
+            <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4" /> Zero-Knowledge Proofs</span>
+            <span className="flex items-center gap-2"><CheckCircle className="w-4 h-4" /> Privacy-Preserving</span>
+          </div>
+          <p className="text-neutral-500 text-sm">
+            Built for India's Healthcare Infrastructure • Powered by Advanced Cryptography
+          </p>
+        </footer>
       </main>
     </div>
   );

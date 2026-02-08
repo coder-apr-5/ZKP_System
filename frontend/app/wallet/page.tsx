@@ -1,68 +1,85 @@
 "use client";
 
-import { useWalletStore } from "@/stores/useWalletStore";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Trash2, Shield, Eye, Lock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShieldCheck, Plus, ScanLine, List } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function WalletPage() {
-    const { credentials, removeCredential } = useWalletStore();
+    const [credentials, setCredentials] = useState<any[]>([]);
+    const router = useRouter();
+
+    useEffect(() => {
+        // Load credentials from IndexedDB or local storage
+        const stored = localStorage.getItem("mediguard_credentials");
+        if (stored) {
+            setCredentials(JSON.parse(stored));
+        }
+    }, []);
 
     return (
-        <div className="container mx-auto p-8 max-w-4xl">
-            <h1 className="text-3xl font-bold mb-8 flex items-center gap-2">
-                <Shield className="w-8 h-8 text-purple-600" />
-                My Credential Wallet
-            </h1>
+        <div className="container mx-auto p-4 md:p-8 max-w-lg min-h-screen relative pb-20">
+            <header className="flex justify-between items-center mb-8">
+                <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                        <ShieldCheck className="w-6 h-6 text-primary" />
+                    </div>
+                    <h1 className="text-2xl font-bold">My Wallet</h1>
+                </div>
+            </header>
 
-            {credentials.length === 0 ? (
-                <div className="text-center py-20 bg-neutral-50 rounded-lg">
-                    <p className="text-neutral-500 mb-4">No credentials found.</p>
-                    <Link href="/issuer">
-                        <Button>Get a Credential</Button>
+            <div className="space-y-6">
+                {/* Action Buttons */}
+                <div className="grid grid-cols-2 gap-4">
+                    <Link href="/wallet/scan">
+                        <Button className="w-full h-20 flex flex-col gap-1 bg-neutral-900 hover:bg-neutral-800 text-white shadow-lg">
+                            <ScanLine className="w-6 h-6" />
+                            Scan QR
+                        </Button>
+                    </Link>
+                    <Link href="/hospital/issue"> {/* Direct link for demo convenience */}
+                        <Button variant="outline" className="w-full h-20 flex flex-col gap-1 border-dashed border-2">
+                            <Plus className="w-6 h-6" />
+                            Add Credential
+                        </Button>
                     </Link>
                 </div>
-            ) : (
-                <div className="grid md:grid-cols-2 gap-6">
-                    {credentials.map((cred) => (
-                        <Card key={cred.id} className="relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" onClick={() => removeCredential(cred.id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                            </div>
-                            <CardHeader className="bg-gradient-to-r from-purple-50 to-indigo-50 border-b">
-                                <CardTitle className="flex justify-between items-center text-purple-900">
-                                    <span>{cred.issuer}</span>
-                                    <Lock className="w-4 h-4 text-purple-400" />
-                                </CardTitle>
-                                <div className="text-xs text-purple-600 font-mono mt-1">
-                                    Issued: {new Date(cred.issuanceDate).toLocaleDateString()}
-                                </div>
-                            </CardHeader>
-                            <CardContent className="pt-6 space-y-2">
-                                {Object.entries(cred.attributes).map(([key, value]) => (
-                                    <div key={key} className="flex justify-between items-center border-b pb-2 last:border-0 last:pb-0">
-                                        <span className="text-sm font-medium text-neutral-500 capitalize">{key}</span>
-                                        <span className="text-sm font-bold text-neutral-800">{value}</span>
-                                    </div>
-                                ))}
-                            </CardContent>
-                            <CardFooter className="bg-neutral-50/50 p-4 flex justify-between">
-                                <div className="text-xs text-neutral-400 flex items-center gap-1">
-                                    <Shield className="w-3 h-3" /> BBS+ Signed
-                                </div>
-                                <Link href={`/verify/wallet-demo?cred=${cred.id}`}>
-                                    <Button variant="outline" size="sm">
-                                        Verify This
-                                    </Button>
+
+                {/* Credentials List */}
+                <div>
+                    <h2 className="text-lg font-semibold mb-4 text-neutral-500 uppercase tracking-wider text-xs">Your Credentials</h2>
+
+                    <div className="space-y-4">
+                        {credentials.length === 0 ? (
+                            <div className="text-center py-12 border-2 border-dashed rounded-xl bg-neutral-50">
+                                <p className="text-neutral-400">No credentials yet.</p>
+                                <Link href="/hospital/issue" className="text-primary text-sm font-medium hover:underline">
+                                    Get your first credential
                                 </Link>
-                            </CardFooter>
-                        </Card>
-                    ))}
+                            </div>
+                        ) : (
+                            credentials.map((cred) => (
+                                <Card key={cred.id} className="relative overflow-hidden group hover:shadow-md transition-all border-l-4 border-l-primary">
+                                    <CardContent className="p-4 flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-lg capitalize">{cred.type.replace("_", " ")}</h3>
+                                            <p className="text-sm text-neutral-500 mb-2">Issued by {cred.iss}</p>
+                                            <div className="flex gap-2">
+                                                <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">Verified</span>
+                                                <span className="bg-neutral-100 text-neutral-600 text-xs px-2 py-1 rounded-full">{new Date(cred.issuedAt).toLocaleDateString()}</span>
+                                            </div>
+                                        </div>
+                                        <ShieldCheck className="w-8 h-8 text-neutral-100 group-hover:text-primary/10 transition-colors" />
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

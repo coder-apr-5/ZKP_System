@@ -1,11 +1,11 @@
 {
-    "name": "ZKP Credential Wallet",
-    "short_name": "ZKP Wallet",
-    "description": "Zero-Knowledge Proof Credential System",
+    "name": "MediGuard - Healthcare Privacy Protocol",
+    "short_name": "MediGuard",
+    "description": "Verify medical credentials with zero-knowledge proofs",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
-    "theme_color": "#4F46E5",
+    "theme_color": "#00A86B",
     "orientation": "portrait",
     "icons": [
         {
