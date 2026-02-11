@@ -34,18 +34,18 @@ export default function WalletPage() {
             <div className="space-y-6">
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 gap-4">
-                    <Link href="/wallet/scan">
-                        <Button className="w-full h-20 flex flex-col gap-1 bg-neutral-900 hover:bg-neutral-800 text-white shadow-lg">
+                    <Button asChild className="w-full h-20 flex flex-col gap-1 bg-neutral-900 hover:bg-neutral-800 text-white shadow-lg">
+                        <Link href="/wallet/scan">
                             <ScanLine className="w-6 h-6" />
                             Scan QR
-                        </Button>
-                    </Link>
-                    <Link href="/hospital/issue"> {/* Direct link for demo convenience */}
-                        <Button variant="outline" className="w-full h-20 flex flex-col gap-1 border-dashed border-2">
+                        </Link>
+                    </Button>
+                    <Button asChild variant="outline" className="w-full h-20 flex flex-col gap-1 border-dashed border-2">
+                        <Link href="/hospital/issue">
                             <Plus className="w-6 h-6" />
                             Add Credential
-                        </Button>
-                    </Link>
+                        </Link>
+                    </Button>
                 </div>
 
                 {/* Credentials List */}

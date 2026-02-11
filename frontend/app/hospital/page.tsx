@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
     Building,
-    ShieldCheck,
-    Activity,
     UserPlus,
     FileCheck
 } from "lucide-react";
@@ -69,18 +67,18 @@ export default function HospitalPortal() {
                     </CardHeader>
                     <CardContent className="grid gap-4">
                         <div className="grid grid-cols-2 gap-4">
-                            <Link href="/hospital/issue">
-                                <Button className="w-full h-24 flex flex-col gap-2 bg-primary hover:bg-primary/90 text-lg">
+                            <Button asChild className="w-full h-24 flex flex-col gap-2 bg-primary hover:bg-primary/90 text-lg">
+                                <Link href="/hospital/issue">
                                     <UserPlus className="w-6 h-6" />
                                     Issue Credential
-                                </Button>
-                            </Link>
-                            <Link href="/hospital/issued">
-                                <Button variant="outline" className="w-full h-24 flex flex-col gap-2 text-lg">
+                                </Link>
+                            </Button>
+                            <Button asChild variant="outline" className="w-full h-24 flex flex-col gap-2 text-lg">
+                                <Link href="/hospital/issued">
                                     <FileCheck className="w-6 h-6" />
                                     View History
-                                </Button>
-                            </Link>
+                                </Link>
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>

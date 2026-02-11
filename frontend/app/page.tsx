@@ -21,12 +21,12 @@ export default function Home() {
           <Link href="/benchmarks" className="text-sm font-medium hover:text-primary transition-colors">Benchmarks</Link>
         </nav>
         <div className="flex gap-3">
-          <Link href="/demo">
-            <Button variant="outline" className="border-primary text-primary hover:bg-primary/10">Live Demo</Button>
-          </Link>
-          <Link href="/wallet">
-            <Button className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25">Get Wallet</Button>
-          </Link>
+          <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary/10">
+            <Link href="/demo">Live Demo</Link>
+          </Button>
+          <Button asChild className="bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/25">
+            <Link href="/wallet">Get Wallet</Link>
+          </Button>
         </div>
       </header>
 
@@ -50,16 +50,16 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
-            <Link href="/wallet">
-              <Button size="lg" className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/30 w-full sm:w-auto">
+            <Button asChild size="lg" className="h-14 px-8 text-lg bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/30 w-full sm:w-auto">
+              <Link href="/wallet">
                 Launch Patient Wallet
-              </Button>
-            </Link>
-            <Link href="/hospital/issue">
-              <Button size="lg" variant="outline" className="h-14 px-8 text-lg border-2 w-full sm:w-auto">
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="h-14 px-8 text-lg border-2 w-full sm:w-auto">
+              <Link href="/hospital/issue">
                 Issue Credential (Hospital)
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </section>
 

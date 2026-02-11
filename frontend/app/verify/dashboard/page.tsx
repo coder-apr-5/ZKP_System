@@ -60,9 +60,9 @@ export default function VerifierDashboard() {
                     </h1>
                     <p className="text-neutral-500 mt-2">Real-time audit log of all verification attempts.</p>
                 </div>
-                <Link href="/verify/global">
-                    <Button>New Verify Request</Button>
-                </Link>
+                <Button asChild>
+                    <Link href="/verify/global">New Verify Request</Link>
+                </Button>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6 mb-8">

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/components/ui/use-toast";
-import { Copy, CheckCircle } from "lucide-react";
+import { Copy, CheckCircle, ShieldCheck } from "lucide-react";
 
 export default function IssuePage() {
     const [formData, setFormData] = useState({
