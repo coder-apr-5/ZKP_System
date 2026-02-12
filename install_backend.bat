@@ -1,7 +1,7 @@
 @echo off
 cd backend
-python -m venv venv
+py -m venv venv
 call venv\Scripts\activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 echo Backend dependencies installed.
 pause

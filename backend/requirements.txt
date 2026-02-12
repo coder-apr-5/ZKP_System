@@ -10,3 +10,4 @@ httpx
 # py-bbs-signatures
 # hyperledger-ursa
 # Note: Specific BBS+ library versions might need adjustment based on available PyPI packages
+pytest
