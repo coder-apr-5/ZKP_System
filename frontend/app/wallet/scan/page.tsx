@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback } from "react";
-import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { X, Copy } from "lucide-react";
@@ -78,19 +78,26 @@ export default function QRScanner() {
 
     useEffect(() => {
         const codeReader = new BrowserMultiFormatReader();
+        let controls: IScannerControls | null = null;
 
         if (scanning && videoRef.current) {
-            codeReader.decodeFromVideoDevice(null, videoRef.current, (result) => {
+            codeReader.decodeFromVideoDevice(undefined, videoRef.current, (result, error, scannerControls) => {
                 if (result) {
                     handleScan(result.getText());
-                    codeReader.reset();
+                    scannerControls.stop();
                     setScanning(false);
                 }
+            }).then((c) => {
+                controls = c;
+            }).catch((err) => {
+                console.error("Error accessing camera:", err);
             });
         }
 
         return () => {
-            codeReader.reset();
+            if (controls) {
+                controls.stop();
+            }
         };
     }, [scanning, handleScan]);
 
