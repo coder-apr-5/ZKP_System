@@ -7,19 +7,16 @@ import { useToast } from "@/components/ui/use-toast";
 import { X, Copy } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-interface Credential {
-    id: string;
-    type: string;
-    iss: string;
-    sig: string;
-    issuedAt?: string;
-}
+import { useWalletStore } from "@/stores/useWalletStore";
+import { type Credential } from "@/lib/db";
 
 export default function QRScanner() {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [scanning, setScanning] = useState(true);
     const router = useRouter();
     const { toast } = useToast();
+    const addCredential = useWalletStore((state) => state.addCredential);
+    const credentials = useWalletStore((state) => state.credentials);
 
     const handleScan = useCallback((data: string) => {
         try {
@@ -48,11 +45,25 @@ export default function QRScanner() {
                     throw new Error("Invalid credential format");
                 }
 
-                const existing = JSON.parse(localStorage.getItem("mediguard_credentials") || "[]");
+                // Map payload to Credential interface
+                const newCredential: Credential = {
+                    id: credential.id,
+                    issuerPublicKey: credential.pk,
+                    signature: credential.sig,
+                    attributes: credential.data || {},
+                    issuedAt: new Date().toISOString(),
+                    issuer: credential.iss,
+                    metadata: {
+                        issuerName: credential.iss,
+                        credentialType: credential.type
+                    }
+                };
+
                 // Avoid duplicates
-                if (!existing.some((c: Credential) => c.id === credential.id)) {
-                    existing.push({ ...credential, issuedAt: new Date().toISOString() });
-                    localStorage.setItem("mediguard_credentials", JSON.stringify(existing));
+                const exists = credentials.some(c => c.id === newCredential.id);
+
+                if (!exists) {
+                    addCredential(newCredential);
                     toast({ title: "Success", description: `Added ${credential.type} credential` });
                 } else {
                     toast({ title: "Info", description: "Credential already exists" });

@@ -8,24 +8,12 @@ import { useWalletStore } from "@/stores/useWalletStore";
 import { Loader2, Plus, CheckCircle } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
-interface IssuedCredential {
-    id: string;
-    issuer: string;
-    subject: string;
-    attributes: Record<string, string>;
-    signature: string;
-    issuerPublicKey: string;
-    issuanceDate: string;
-    metadata: {
-        issuerName: string;
-        credentialType: string;
-    };
-}
+import { type Credential } from "@/lib/db";
 
 export default function IssuerPage() {
     const [attributes, setAttributes] = useState({ name: "", age: "", membership: "basic" });
     const [loading, setLoading] = useState(false);
-    const [issuedCredential, setIssuedCredential] = useState<IssuedCredential | null>(null);
+    const [issuedCredential, setIssuedCredential] = useState<Credential | null>(null);
     const addCredential = useWalletStore((state) => state.addCredential);
 
     const handleIssue = async () => {
@@ -34,14 +22,14 @@ export default function IssuerPage() {
             // In a real app, authentication would be required here
             const result = await api.issuer.issueCredential(attributes);
 
-            const credential = {
+            const credential: Credential = {
                 id: crypto.randomUUID(),
                 issuer: "ZKP Demo Issuer",
                 subject: attributes.name,
                 attributes,
                 signature: result.credential.signature,
                 issuerPublicKey: result.credential.issuerPublicKey,
-                issuanceDate: new Date().toISOString(),
+                issuedAt: new Date().toISOString(),
                 metadata: {
                     issuerName: "ZKP Demo Issuer",
                     credentialType: "IdentityCredential"

@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Loader2, ShieldCheck } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { useWalletStore } from "@/stores/useWalletStore";
+import { type Credential } from "@/lib/db";
 
 interface RequestData {
     provider_name: string;
@@ -15,13 +17,7 @@ interface RequestData {
     };
 }
 
-interface Credential {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    attributes: Record<string, any>;
-    type: string;
-    issuedAt: string;
-    pk?: string;
-}
+
 
 export default function ProvePage() {
     const params = useSearchParams();
@@ -32,6 +28,12 @@ export default function ProvePage() {
     const [request, setRequest] = useState<RequestData | null>(null);
     const [matchingCred, setMatchingCred] = useState<Credential | null>(null);
     const [loading, setLoading] = useState(true);
+    const credentials = useWalletStore((state) => state.credentials);
+    const refreshCredentials = useWalletStore((state) => state.refreshCredentials);
+
+    useEffect(() => {
+        refreshCredentials();
+    }, [refreshCredentials]);
 
     useEffect(() => {
         // 1. Fetch Request Details
@@ -48,14 +50,13 @@ export default function ProvePage() {
                 setRequest(data);
 
                 // 2. Select Matching Credential
-                const creds = JSON.parse(localStorage.getItem("mediguard_credentials") || "[]");
-                const match = creds.find((c: Credential) => {
+                const match = credentials.find((c: Credential) => {
                     // Basic matching based on predicate attribute checking (e.g. vaccination type)
                     const predAttr = data.predicate.attribute;
-                    return c.attributes[predAttr] !== undefined;
+                    return c.attributes && c.attributes[predAttr] !== undefined;
                 });
 
-                setMatchingCred(match);
+                setMatchingCred(match || null);
             } catch {
                 toast({ title: "Error", description: "Request expired" });
                 router.push("/wallet");
@@ -63,8 +64,15 @@ export default function ProvePage() {
                 setLoading(false);
             }
         };
-        fetchRequest();
-    }, [requestId, router, toast]);
+
+        if (credentials.length > 0) {
+            fetchRequest();
+        } else {
+            // Maybe wait a bit or fetch anyway if we want to confirm no match
+            // For now, let's fetch to at least show the request details
+            fetchRequest();
+        }
+    }, [requestId, router, toast, credentials]);
 
     const handleProve = async () => {
         setLoading(true);
@@ -80,7 +88,7 @@ export default function ProvePage() {
                     request_id: requestId,
                     proof: "mock_zkp_proof_payload_xyz", // Must contain 'mock_zkp' for backend mock validation
                     revealed_attributes: {}, // Zero-Knowledge: reveal nothing except predicate satisfaction
-                    issuer_public_key: matchingCred?.pk // From stored credential
+                    issuer_public_key: matchingCred?.issuerPublicKey // From stored credential
                 })
             });
 
@@ -152,7 +160,7 @@ export default function ProvePage() {
 
                     {matchingCred ? (
                         <div className="text-xs text-center text-neutral-400">
-                            Using: <span className="font-medium text-neutral-600">{matchingCred.type}</span> (Issued: {new Date(matchingCred.issuedAt).toLocaleDateString()})
+                            Using: <span className="font-medium text-neutral-600">{matchingCred.metadata.credentialType}</span> (Issued: {new Date(matchingCred.issuedAt).toLocaleDateString()})
                         </div>
                     ) : (
                         <div className="text-center text-red-500 text-sm font-semibold">

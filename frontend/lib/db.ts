@@ -4,19 +4,15 @@ export interface Credential {
     id: string;
     issuerPublicKey: string;
     signature: string; // Base64 encoding of BBS+ signature
-    attributes: {
-        name: string;
-        birthdate: string;
-        licenseNumber: string;
-        state: string;
-        expiry: string;
-        [key: string]: string;
-    };
+    attributes: Record<string, any>;
     issuedAt: string;
     metadata: {
         issuerName: string;
         credentialType: string;
+        [key: string]: any;
     };
+    issuer?: string;
+    subject?: string;
 }
 
 export interface Proof {
