@@ -8,7 +8,7 @@ alembic==1.13.1
 asyncpg==0.29.0
 structlog==24.1.0
 qrcode==7.4.2
-pillow==10.2.0
+pillow==12.1.1
 # For BBS+ signatures (ensure correct package or build from source)
 # py-bbs-signatures or similar wrapper around mattrglobal rust impl
 # For now, placeholder or specific if available
