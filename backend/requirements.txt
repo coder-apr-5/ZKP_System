@@ -1,12 +1,16 @@
-fastapi
-uvicorn
-python-multipart
-qrcode
-pydantic
-sqlalchemy
-aiosqlite
-httpx
-# mattrglobal-bbs-signatures
-# py-bbs-signatures
-# hyperledger-ursa
-# Note: Specific BBS+ library versions might need adjustment based on available PyPI packages
+fastapi==0.109.2
+uvicorn==0.27.1
+python-multipart==0.0.9
+pydantic==2.6.1
+pydantic-settings==2.1.0
+sqlalchemy==2.0.27
+alembic==1.13.1
+asyncpg==0.29.0
+structlog==24.1.0
+qrcode==7.4.2
+pillow==10.2.0
+# For BBS+ signatures (ensure correct package or build from source)
+# py-bbs-signatures or similar wrapper around mattrglobal rust impl
+# For now, placeholder or specific if available
+httpx==0.26.0
+pytest==8.0.0

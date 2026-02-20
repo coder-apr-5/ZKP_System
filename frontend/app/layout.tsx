@@ -1,26 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-primary",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const firaCode = Fira_Code({
   subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "MediGuard - Healthcare Privacy Protocol",
-  description: "Verify medical credentials with zero-knowledge proofs.",
+  title: "PrivaSeal - Universal Privacy-First Verification",
+  description: "Verify Anything. Reveal Nothing. Zero-knowledge proofs for universal verification.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "MediGuard",
+    title: "PrivaSeal",
   },
   formatDetection: {
     telephone: false,
@@ -28,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#00A86B",
+  themeColor: "#2563EB",
   width: "device-width",
   initialScale: 1,
   minimumScale: 1,
@@ -43,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${firaCode.variable} font-primary antialiased bg-gray-50 text-gray-900 min-h-screen`}
       >
         {children}
         <Toaster />

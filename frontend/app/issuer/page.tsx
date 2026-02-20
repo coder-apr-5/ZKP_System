@@ -1,138 +1,94 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { api } from "@/services/api";
-import { useWalletStore } from "@/stores/useWalletStore";
-import { Loader2, Plus, CheckCircle } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, List, Settings, Activity } from "lucide-react";
 
-import { type Credential } from "@/lib/db";
-
-export default function IssuerPage() {
-    const [attributes, setAttributes] = useState({ name: "", age: "", membership: "basic" });
-    const [loading, setLoading] = useState(false);
-    const [issuedCredential, setIssuedCredential] = useState<Credential | null>(null);
-    const addCredential = useWalletStore((state) => state.addCredential);
-
-    const handleIssue = async () => {
-        setLoading(true);
-        try {
-            // In a real app, authentication would be required here
-            const result = await api.issuer.issueCredential(attributes);
-
-            const credential: Credential = {
-                id: crypto.randomUUID(),
-                issuer: "ZKP Demo Issuer",
-                subject: attributes.name,
-                attributes,
-                signature: result.credential.signature,
-                issuerPublicKey: result.credential.issuerPublicKey,
-                issuedAt: new Date().toISOString(),
-                metadata: {
-                    issuerName: "ZKP Demo Issuer",
-                    credentialType: "IdentityCredential"
-                }
-            };
-
-            setIssuedCredential(credential);
-        } catch (e) {
-            console.error(e);
-            alert("Failed to issue credential");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleAddToWallet = () => {
-        if (issuedCredential) {
-            addCredential(issuedCredential);
-            alert("Credential added to your wallet locally!");
-            setIssuedCredential(null);
-            setAttributes({ name: "", age: "", membership: "basic" });
-        }
-    };
-
+export default function IssuerDashboard() {
     return (
-        <div className="container mx-auto p-8 max-w-4xl">
-            <h1 className="text-3xl font-bold mb-8">Issuer Portal</h1>
+        <div className="container mx-auto p-8 max-w-6xl font-primary">
+            <div className="flex justify-between items-center mb-10">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Issuer Portal</h1>
+                    <p className="text-gray-500 mt-1">Manage credentials and cryptographic keys.</p>
+                </div>
+                <Button asChild variant="outline">
+                    <Link href="/issuer/init"><Settings className="mr-2 w-4 h-4" /> Key Management</Link>
+                </Button>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 mb-12">
+                <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-privaseal-blue">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Issued</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-4xl font-bold text-gray-900">1,284</div>
+                        <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                            <Activity className="w-3 h-3 text-green-500" /> +12% this week
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-privaseal-green">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active Credentials</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-4xl font-bold text-gray-900">97%</div>
+                        <p className="text-xs text-gray-500 mt-1">Valid and unrevoked</p>
+                    </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-lg transition-shadow border-t-4 border-t-purple-500">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-gray-500 uppercase tracking-wider">Types Supported</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-4xl font-bold text-gray-900">3</div>
+                        <p className="text-xs text-gray-500 mt-1">Vaccine, Rx, Age</p>
+                    </CardContent>
+                </Card>
+            </div>
+
             <div className="grid md:grid-cols-2 gap-8">
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Issue New Credential</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Name</label>
-                            <input
-                                className="w-full p-2 border rounded-md"
-                                value={attributes.name}
-                                onChange={(e) => setAttributes({ ...attributes, name: e.target.value })}
-                                placeholder="John Doe"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Age</label>
-                            <input
-                                type="number"
-                                className="w-full p-2 border rounded-md"
-                                value={attributes.age}
-                                onChange={(e) => setAttributes({ ...attributes, age: e.target.value })}
-                                placeholder="25"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Membership</label>
-                            <select
-                                className="w-full p-2 border rounded-md"
-                                value={attributes.membership}
-                                onChange={(e) => setAttributes({ ...attributes, membership: e.target.value })}
-                            >
-                                <option value="basic">Basic</option>
-                                <option value="silver">Silver</option>
-                                <option value="gold">Gold</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-
-                        <Button className="w-full mt-4" onClick={handleIssue} disabled={loading || !attributes.name || !attributes.age}>
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                            Issue Credential
-                        </Button>
-                    </CardContent>
-                </Card>
-
-                <Card className={issuedCredential ? "border-green-500 bg-green-50/50" : "opacity-50"}>
-                    <CardHeader>
-                        <CardTitle>Issued Credential</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex flex-col items-center justify-center space-y-4">
-                        {issuedCredential ? (
-                            <>
-                                <div className="bg-white p-4 rounded-lg shadow-sm">
-                                    <QRCodeSVG value={JSON.stringify(issuedCredential)} size={150} />
-                                </div>
-                                <div className="text-center">
-                                    <p className="font-semibold text-green-700">Signed with BBS+</p>
-                                    <p className="text-xs text-neutral-500 break-all max-w-[250px] mt-2">
-                                        Sig: {issuedCredential.signature.substring(0, 20)}...
-                                    </p>
-                                </div>
-                                <Button variant="outline" className="w-full border-green-600 text-green-700 hover:bg-green-100" onClick={handleAddToWallet}>
-                                    <CheckCircle className="mr-2 h-4 w-4" />
-                                    Add to Wallet
-                                </Button>
-                            </>
-                        ) : (
-                            <div className="text-center py-12 text-neutral-400">
-                                <p>Credential will appear here after issuance.</p>
+                <Card className="h-full hover:border-privaseal-blue transition-colors group cursor-pointer">
+                    <Link href="/issuer/issue">
+                        <CardHeader>
+                            <div className="w-12 h-12 bg-privaseal-blue/10 rounded-lg flex items-center justify-center text-privaseal-blue mb-4 group-hover:bg-privaseal-blue group-hover:text-white transition-colors">
+                                <Plus className="w-6 h-6" />
                             </div>
-                        )}
-                    </CardContent>
+                            <CardTitle className="text-xl">Issue New Credential</CardTitle>
+                            <CardDescription>Create and sign a new verifiable credential for a user.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="space-y-2 text-sm text-gray-600">
+                                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-privaseal-blue"></div> Vaccination Certificates</li>
+                                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-privaseal-blue"></div> Medical Prescriptions</li>
+                                <li className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-privaseal-blue"></div> Age Verification IDs</li>
+                            </ul>
+                        </CardContent>
+                    </Link>
                 </Card>
 
+                <Card className="h-full hover:border-privaseal-blue transition-colors group cursor-pointer">
+                    <Link href="/issuer/issued">
+                        <CardHeader>
+                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-gray-600 mb-4 group-hover:bg-gray-800 group-hover:text-white transition-colors">
+                                <List className="w-6 h-6" />
+                            </div>
+                            <CardTitle className="text-xl">View Issued Log</CardTitle>
+                            <CardDescription>Audit log of all credentials issued by this institution.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-gray-500 mb-4">
+                                View privacy-preserving logs. No personal data is stored, only credential hashes and timestamps.
+                            </p>
+                            <Button variant="secondary" className="w-full">View Audit Log</Button>
+                        </CardContent>
+                    </Link>
+                </Card>
             </div>
         </div>
     );

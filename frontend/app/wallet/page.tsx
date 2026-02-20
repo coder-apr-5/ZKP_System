@@ -1,103 +1,95 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ShieldCheck, Plus, ScanLine } from "lucide-react";
-import Link from "next/link";
-import { useToast } from "@/components/ui/use-toast";
-
-import { useWalletStore } from "@/stores/useWalletStore";
-import { type Credential } from "@/lib/db";
-import { db } from "@/lib/db";
+import { QrCode, Shield, User, Info, Scan, Plus, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function WalletPage() {
-    const credentials = useWalletStore((state) => state.credentials);
-    const refreshCredentials = useWalletStore((state) => state.refreshCredentials);
-    const { toast } = useToast();
+    const [credentials, setCredentials] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        refreshCredentials();
-    }, [refreshCredentials]);
+        // Simulate loading from IndexedDB
+        setTimeout(() => {
+            setCredentials([
+                { id: "1", type: "Vaccination Record", issuer: "Apollo Hospital", date: "2024-01-15" },
+                { id: "2", type: "Age Verification", issuer: "UIDAI", date: "2025-02-20" }
+            ]);
+            setLoading(false);
+        }, 1000);
+    }, []);
 
     return (
-        <div className="container mx-auto p-4 md:p-8 max-w-lg min-h-screen relative pb-20">
-            <header className="flex justify-between items-center mb-8">
-                <div className="flex items-center gap-2">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                        <ShieldCheck className="w-6 h-6 text-primary" />
-                    </div>
-                    <h1 className="text-2xl font-bold">My Wallet</h1>
-                </div>
+        <div className="container mx-auto p-4 max-w-md font-primary min-h-screen pb-24 relative">
+            <header className="flex justify-between items-center mb-6 pt-4">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Wallet</h1>
+                <Button size="icon" variant="ghost">
+                    <User className="w-5 h-5" />
+                </Button>
             </header>
 
-            <div className="space-y-6">
-                {/* Action Buttons */}
-                <div className="grid grid-cols-2 gap-4">
-                    <Button asChild className="w-full h-24 flex flex-col gap-2 bg-gradient-to-br from-neutral-900 to-neutral-800 hover:from-black hover:to-neutral-900 text-white shadow-xl rounded-xl border border-neutral-700">
-                        <Link href="/wallet/scan">
-                            <ScanLine className="w-8 h-8 mb-1" />
-                            <span className="text-lg font-semibold">Scan QR Code</span>
-                            <span className="text-xs text-neutral-400 font-normal">Add Credential or Verify</span>
-                        </Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-full h-24 flex flex-col gap-2 border-dashed border-2 hover:bg-neutral-50 rounded-xl">
-                        <Link href="/hospital">
-                            <Plus className="w-6 h-6 text-neutral-400 mb-1" />
-                            <span className="font-medium text-neutral-600">Get New Credential</span>
-                            <span className="text-xs text-neutral-400 font-normal">(Go to Hospital Portal)</span>
-                        </Link>
-                    </Button>
+            <div className="bg-gradient-to-r from-privaseal-blue to-blue-600 rounded-2xl p-6 text-white shadow-lg mb-8 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-20 transform translate-x-1/4 -translate-y-1/4">
+                    <Shield className="w-32 h-32" />
                 </div>
-
-                {/* Credentials List */}
-                <div>
-                    <h2 className="text-lg font-semibold mb-4 text-neutral-500 uppercase tracking-wider text-xs">Your Credentials</h2>
-
-                    <div className="space-y-4">
-                        {credentials.length === 0 ? (
-                            <div className="text-center py-12 border-2 border-dashed rounded-xl bg-neutral-50">
-                                <p className="text-neutral-400">No credentials yet.</p>
-                                <Link href="/issuer" className="text-primary text-sm font-medium hover:underline">
-                                    Get your first credential (Demo Issuer)
-                                </Link>
-                            </div>
-                        ) : (
-                            credentials.map((cred) => (
-                                <Card key={cred.id} className="relative overflow-hidden group hover:shadow-md transition-all border-l-4 border-l-primary">
-                                    <CardContent className="p-4 flex justify-between items-start">
-                                        <div>
-                                            <h3 className="font-bold text-lg capitalize">{cred.metadata?.credentialType?.replace("_", " ") || "Credential"}</h3>
-                                            <p className="text-sm text-neutral-500 mb-2">Issued by {cred.metadata?.issuerName || cred.issuer || "Unknown"}</p>
-                                            <div className="flex gap-2">
-                                                <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full font-medium">Verified</span>
-                                                <span className="bg-neutral-100 text-neutral-600 text-xs px-2 py-1 rounded-full">{new Date(cred.issuedAt).toLocaleDateString()}</span>
-                                            </div>
-                                        </div>
-                                        <ShieldCheck className="w-8 h-8 text-neutral-100 group-hover:text-primary/10 transition-colors" />
-                                    </CardContent>
-                                </Card>
-                            ))
-                        )}
+                <p className="text-blue-100 text-sm font-medium mb-1">PrivaSeal ID</p>
+                <h2 className="text-2xl font-bold mb-4">Arjun Mehta</h2>
+                <div className="flex justify-between items-end relative z-10">
+                    <div>
+                        <p className="text-xs text-blue-200">Wallet Status</p>
+                        <p className="font-semibold flex items-center gap-1"><span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span> Active</p>
                     </div>
+                    <QrCode className="w-8 h-8 opacity-90" />
                 </div>
             </div>
 
-            <div className="py-8 flex justify-center border-t mt-8">
-                <Button
-                    variant="ghost"
-                    className="text-red-500 hover:text-red-600 hover:bg-red-50 text-xs"
-                    onClick={async () => {
-                        if (confirm("Reset wallet and delete all credentials?")) {
-                            await db.credentials.clear();
-                            refreshCredentials();
-                            toast({ title: "Wallet Reset", description: "All credentials deleted." });
-                        }
-                    }}
-                >
-                    Reset / Clear Wallet (Demo)
-                </Button>
+            <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-lg text-gray-900 dark:text-white">My Credentials</h3>
+                <Button variant="ghost" size="sm" className="text-privaseal-blue hover:text-privaseal-blue-dark hover:bg-privaseal-blue/10">See All</Button>
             </div>
-        </div >
+
+            {loading ? (
+                <div className="flex justify-center py-10"><Loader2 className="animate-spin text-privaseal-blue w-8 h-8" /></div>
+            ) : (
+                <div className="space-y-4">
+                    {credentials.map((cred) => (
+                        <Card key={cred.id} className="border-l-4 border-l-privaseal-blue shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                            <CardContent className="p-4 flex justify-between items-center">
+                                <div>
+                                    <h4 className="font-bold text-gray-900 group-hover:text-privaseal-blue transition-colors">{cred.type}</h4>
+                                    <p className="text-sm text-gray-500">{cred.issuer}</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium border border-green-200">Verified</span>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
+
+                    <Button variant="outline" className="w-full border-dashed border-2 py-8 text-gray-500 hover:border-privaseal-blue hover:text-privaseal-blue hover:bg-blue-50/50 transition-all">
+                        <Plus className="mr-2 w-5 h-5" /> Add New Credential
+                    </Button>
+                </div>
+            )}
+
+            {/* Mobile Bottom Nav - Centered Scan Button */}
+            <div className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-50">
+                <div className="bg-gray-900/90 backdrop-blur-md text-white px-6 py-2 rounded-full shadow-2xl flex items-center gap-10 border border-gray-800">
+                    <Link href="/wallet" className="text-privaseal-blue transition-colors"><User className="w-6 h-6" /></Link>
+
+                    <div className="relative -top-6">
+                        <Link href="/wallet/scan">
+                            <div className="bg-privaseal-blue w-14 h-14 rounded-full shadow-lg shadow-privaseal-blue/40 border-4 border-gray-50 dark:border-gray-900 flex items-center justify-center transform hover:scale-105 transition-transform">
+                                <Scan className="w-6 h-6 text-white" />
+                            </div>
+                        </Link>
+                    </div>
+
+                    <Link href="#" className="text-gray-400 hover:text-white transition-colors"><Info className="w-6 h-6" /></Link>
+                </div>
+            </div>
+        </div>
     );
 }
