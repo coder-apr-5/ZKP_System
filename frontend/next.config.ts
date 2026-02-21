@@ -1,16 +1,18 @@
 import type { NextConfig } from "next";
 
-// @ts-expect-error - next-pwa types might not be perfectly resolved
 import withPWAInit from "@ducanh2912/next-pwa";
 
 const withPWA = withPWAInit({
   dest: "public",
   register: true,
-  skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  workboxOptions: {
+    skipWaiting: true,
+  },
 });
 
 const nextConfig: NextConfig = {
+  turbopack: {},
   async rewrites() {
     return [
       {
