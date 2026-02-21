@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { db, Credential, Proof } from '@/lib/db';
-import { useLiveQuery } from 'dexie-react-hooks';
 
 interface WalletState {
     credentials: Credential[];
@@ -42,5 +41,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     }
 }));
 
-// Initialize store with data
-db.credentials.toArray().then(creds => useWalletStore.setState({ credentials: creds }));
+// Initialize store with data — only in browser (IndexedDB unavailable in SSR)
+if (typeof window !== 'undefined') {
+    db.credentials.toArray().then(creds => useWalletStore.setState({ credentials: creds }));
+}
