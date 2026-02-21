@@ -31,17 +31,41 @@ export interface Settings {
     value: any;
 }
 
-const db = new Dexie('zkp-credentials-db') as Dexie & {
+type AppDB = Dexie & {
     credentials: EntityTable<Credential, 'id'>;
     proofs: EntityTable<Proof, 'id'>;
     settings: EntityTable<Settings, 'key'>;
 };
 
-// Define schema
-db.version(1).stores({
-    credentials: 'id, issuedAt, metadata.issuerName',
-    proofs: 'id, credentialId, verifierId, timestamp',
-    settings: 'key'
-});
+// ─── Lazy singleton ───────────────────────────────────────────────────────────
+// Dexie uses IndexedDB which only exists in a browser context.
+// We defer construction to the first access so that Next.js SSR (Node.js)
+// never tries to touch window.indexedDB and throws "IndexedDB API missing".
 
-export { db };
+let _db: AppDB | null = null;
+
+function getDb(): AppDB {
+    if (typeof window === 'undefined') {
+        // SSR: return a no-op stub so imports don't crash during pre-rendering.
+        // Real DB calls must only happen inside useEffect / event handlers.
+        throw new Error('IndexedDB is only available in the browser.');
+    }
+    if (!_db) {
+        const instance = new Dexie('zkp-credentials-db') as AppDB;
+        instance.version(1).stores({
+            credentials: 'id, issuedAt, metadata.issuerName',
+            proofs: 'id, credentialId, verifierId, timestamp',
+            settings: 'key',
+        });
+        _db = instance;
+    }
+    return _db;
+}
+
+// Proxy object — any property access goes through getDb() so callers keep the
+// same `db.credentials.toArray()` syntax without changing a line of code.
+export const db = new Proxy({} as AppDB, {
+    get(_target, prop: string) {
+        return getDb()[prop as keyof AppDB];
+    },
+});
