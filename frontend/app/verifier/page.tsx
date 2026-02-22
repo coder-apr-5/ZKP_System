@@ -1,699 +1,272 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
-import {
-    ShieldCheck,
-    ShieldX,
-    QrCode,
-    Clock,
-    CheckCircle2,
-    XCircle,
-    Loader2,
-    RotateCcw,
-    Play,
-    Send,
-    Activity,
-    BarChart3,
-    History,
-    Zap,
+    Search, QrCode, ShieldCheck, ShieldX, Scan,
+    Zap, Clock, History, CheckCircle2, XCircle,
+    Loader2, ArrowRight, Activity, Filter, RefreshCcw, Info
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { useDemoData, VerificationLog } from "@/context/DemoContext";
+import RoleGuard from "@/components/RoleGuard";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/components/ui/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
 
-// ─── Config ──────────────────────────────────────────────────────────────────
-
-const BACKEND = "http://localhost:8000";
-const POLL_INTERVAL = 3000; // 3 s
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-interface VerificationRequest {
-    id: string;
-    predicateKey: string;
-    predicateLabel: string;
-    predicateDesc: string;
-    predicateIcon: string;
-    credentialType: string;
-    status: string;
-    statusLabel: string;
-    qrUri: string;
-    createdAt: string;
-    expiresAt: string;
-    verifiedAt: string | null;
-    proofHash: string | null;
-    errorMsg: string | null;
-}
-
-interface Stats {
-    totalRequests: number;
-    verified: number;
-    failed: number;
-    pending: number;
-    successRate: number;
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function statusConfig(status: string): {
-    color: string; dotColor: string; icon: React.ReactNode; label: string;
-} {
-    switch (status) {
-        case "verified":
-            return {
-                color: "text-green-700 bg-green-50 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800",
-                dotColor: "bg-green-500",
-                icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-                label: "Verified",
-            };
-        case "failed":
-            return {
-                color: "text-red-700 bg-red-50 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800",
-                dotColor: "bg-red-500",
-                icon: <XCircle className="w-3.5 h-3.5" />,
-                label: "Failed",
-            };
-        case "verifying":
-            return {
-                color: "text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400",
-                dotColor: "bg-blue-500 animate-pulse",
-                icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />,
-                label: "Verifying",
-            };
-        case "waiting_proof":
-        default:
-            return {
-                color: "text-amber-700 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400",
-                dotColor: "bg-amber-400 animate-pulse",
-                icon: <Clock className="w-3.5 h-3.5" />,
-                label: "Awaiting Proof",
-            };
-    }
-}
-
-function shortId(id: string) { return id.slice(0, 8).toUpperCase(); }
-function fmtDate(iso: string) {
-    try {
-        return new Date(iso).toLocaleString("en-IN", {
-            day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
-        });
-    } catch { return iso; }
-}
-
-// ─── QR Code (SVG-based, no external lib) ────────────────────────────────────
-
-function QRPlaceholder({ uri, size = 180 }: { uri: string; size?: number }) {
-    // Simple visual QR placeholder — in production replace with a real QR lib
-    const cells = 21;
-    const cell = size / cells;
-
-    // Deterministic pattern from URI hash
-    const hash = Array.from(uri).reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) >>> 0, 0);
-    const pattern = Array.from({ length: cells * cells }, (_, i) => {
-        const row = Math.floor(i / cells);
-        const col = i % cells;
-        // Finder patterns (corners)
-        if ((row < 8 && col < 8) ||
-            (row < 8 && col > cells - 9) ||
-            (row > cells - 9 && col < 8)) return true;
-        // Data modules (deterministic)
-        return ((hash >> ((i % 32))) & 1) === 1;
-    });
-
-    return (
-        <div
-            className="inline-block p-3 bg-white rounded-xl shadow-inner border border-gray-100"
-            title={uri}
-            aria-label="Verification QR Code"
-        >
-            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-                {pattern.map((filled, i) => {
-                    const row = Math.floor(i / cells);
-                    const col = i % cells;
-                    return filled ? (
-                        <rect
-                            key={i}
-                            x={col * cell}
-                            y={row * cell}
-                            width={cell}
-                            height={cell}
-                            fill="#111827"
-                            rx={cell * 0.1}
-                        />
-                    ) : null;
-                })}
-            </svg>
-        </div>
-    );
-}
-
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, sub, accent }: {
-    label: string; value: number | string; sub: string; accent: string;
-}) {
-    return (
-        <Card className={`border-t-4 ${accent}`}>
-            <CardHeader className="pb-1 pt-4 px-5">
-                <CardTitle className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5 pb-4">
-                <div className="text-3xl font-bold text-foreground">{value}</div>
-                <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
-            </CardContent>
-        </Card>
-    );
-}
-
-// ─── Predicate options ────────────────────────────────────────────────────────
-
-const PREDICATE_OPTIONS = [
-    { key: "age_gt_18", label: "🪪  Age > 18", desc: "Proves holder is over 18" },
-    { key: "age_gt_21", label: "🍺  Age > 21", desc: "Proves holder is over 21" },
-    { key: "vaccinated", label: "💉  Vaccinated", desc: "Valid vaccination record" },
-    { key: "prescription_valid", label: "💊  Prescription Valid", desc: "Active prescription" },
-];
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-export default function VerifierPage() {
+function VerifierPortalContent() {
+    const { backendProfile } = useAuth();
+    const { verificationLogs, addVerificationLog } = useDemoData();
     const { toast } = useToast();
-    const router = useRouter();
 
-    // Request creation state
-    const [predicateKey, setPredicateKey] = useState("age_gt_18");
-    const [creating, setCreating] = useState(false);
-    const [activeRequest, setActiveRequest] = useState<VerificationRequest | null>(null);
+    const [inputId, setInputId] = useState("");
+    const [isChecking, setIsChecking] = useState(false);
+    const [result, setResult] = useState<VerificationLog | null>(null);
+    const [verifyingMode, setVerifyingMode] = useState<"id" | "qr">("id");
 
-    // Simulation state
-    const [simulating, setSimulating] = useState(false);
+    const handleVerify = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!inputId.trim() && verifyingMode === "id") return;
 
-    // History
-    const [history, setHistory] = useState<VerificationRequest[]>([]);
-    const [histLoading, setHistLoading] = useState(true);
+        setIsChecking(true);
+        setResult(null);
 
-    // Stats
-    const [stats, setStats] = useState<Stats | null>(null);
+        // Simulate network and cryptographic verification
+        await new Promise(r => setTimeout(r, 2000));
 
-    // Polling ref
-    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+        // Logic: Verified if ID doesn't contain "FAIL" or "NO"
+        const isVerified = !inputId.toUpperCase().includes("FAIL") && !inputId.toUpperCase().includes("NO");
 
-    // ── Fetch stats ─────────────────────────────────────────────────────
+        const newLog = {
+            checkedId: inputId || "QR-SESSION-9921",
+            result: (isVerified ? "Verified" : "Not Verified") as VerificationLog["result"],
+            type: "Universal Check",
+            verifier: backendProfile?.name || "Local Verifier"
+        };
 
-    const fetchStats = useCallback(async () => {
-        try {
-            const r = await fetch(`${BACKEND}/api/verifier/stats`, { cache: "no-store" });
-            if (r.ok) setStats(await r.json());
-        } catch { /* silent */ }
-    }, []);
+        addVerificationLog(newLog);
+        setResult({
+            ...newLog,
+            id: `LOG-${Math.floor(100 + Math.random() * 899)}`,
+            timestamp: new Date().toISOString()
+        });
 
-    // ── Fetch history ───────────────────────────────────────────────────
+        setIsChecking(false);
 
-    const fetchHistory = useCallback(async () => {
-        try {
-            const r = await fetch(`${BACKEND}/api/verifier/requests?per_page=20`, { cache: "no-store" });
-            if (r.ok) {
-                const j = await r.json();
-                setHistory(j.data ?? []);
-            }
-        } catch { /* silent */ }
-        finally { setHistLoading(false); }
-    }, []);
-
-    // ── Poll active request status ───────────────────────────────────────
-
-    const pollActiveRequest = useCallback(async (id: string) => {
-        try {
-            const r = await fetch(`${BACKEND}/api/verifier/requests/${id}`, { cache: "no-store" });
-            if (!r.ok) return;
-            const j = await r.json();
-            const req: VerificationRequest = j.request;
-            setActiveRequest(req);
-
-            if (req.status === "verified" || req.status === "failed") {
-                // Stop polling
-                if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-                fetchHistory();
-                fetchStats();
-                toast({
-                    title: req.status === "verified" ? "✅ Proof Verified!" : "❌ Verification Failed",
-                    description: req.status === "verified"
-                        ? `Predicate "${req.predicateLabel}" satisfied.`
-                        : req.errorMsg ?? "Proof did not satisfy the predicate.",
-                    variant: req.status === "verified" ? "default" : "destructive",
-                });
-            }
-        } catch { /* silent */ }
-    }, [fetchHistory, fetchStats, toast]);
-
-    // ── Create request ───────────────────────────────────────────────────
-
-    const handleCreateRequest = async () => {
-        setCreating(true);
-        try {
-            const r = await fetch(`${BACKEND}/api/verifier/request`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ predicate_key: predicateKey }),
-            });
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            const j = await r.json();
-            setActiveRequest(j.request);
-
-            toast({ title: "Verification Request Created", description: "Show QR code to the user's wallet." });
-
-            // Start polling
-            if (pollRef.current) clearInterval(pollRef.current);
-            pollRef.current = setInterval(() => pollActiveRequest(j.request.id), POLL_INTERVAL);
-        } catch (err: unknown) {
-            toast({ title: "Failed", description: String(err), variant: "destructive" });
-        } finally {
-            setCreating(false);
-        }
+        toast({
+            title: isVerified ? "Verification Successful" : "Verification Failed",
+            description: isVerified ? "Cryptographic proof is valid." : "Invalid proof or expired credential.",
+            variant: isVerified ? "default" : "destructive"
+        });
     };
-
-    // ── Simulate wallet submitting proof (demo mode) ─────────────────────
-
-    const handleSimulateProof = async () => {
-        if (!activeRequest) return;
-        setSimulating(true);
-        try {
-            // Mark as received on backend
-            setActiveRequest(prev => prev ? { ...prev, status: "verifying", statusLabel: "Verifying…" } : prev);
-
-            const r = await fetch(`${BACKEND}/api/verifier/verify`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    request_id: activeRequest.id,
-                    proof: `demo-proof-${Date.now()}`,
-                    revealed_attributes: { demo: true },
-                }),
-            });
-            if (!r.ok) throw new Error(`HTTP ${r.status}`);
-            const j = await r.json();
-            setActiveRequest(j.request);
-
-            if (j.request.status === "verified" || j.request.status === "failed") {
-                if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-                fetchHistory();
-                fetchStats();
-                toast({
-                    title: j.request.status === "verified" ? "✅ Verified!" : "❌ Failed",
-                    description: j.request.status === "verified"
-                        ? "ZK Proof validated successfully."
-                        : j.request.errorMsg ?? "Proof failed.",
-                    variant: j.request.status === "verified" ? "default" : "destructive",
-                });
-            }
-        } catch (err: unknown) {
-            toast({ title: "Simulation Failed", description: String(err), variant: "destructive" });
-        } finally {
-            setSimulating(false);
-        }
-    };
-
-    // ── Reset ───────────────────────────────────────────────────────────
-
-    const handleReset = () => {
-        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-        setActiveRequest(null);
-    };
-
-    // ── Init & cleanup ──────────────────────────────────────────────────
-
-    useEffect(() => {
-        fetchHistory();
-        fetchStats();
-        return () => { if (pollRef.current) clearInterval(pollRef.current); };
-    }, [fetchHistory, fetchStats]);
-
-    // ── Derived ─────────────────────────────────────────────────────────
-
-    const selectedPred = PREDICATE_OPTIONS.find(p => p.key === predicateKey)!;
-    const activeStatus = activeRequest ? statusConfig(activeRequest.status) : null;
-    const isTerminal = activeRequest?.status === "verified" || activeRequest?.status === "failed";
-    const canSimulate = activeRequest && !isTerminal && !simulating;
-
-    // ════════════════════════════════════════════════════════════════════
 
     return (
-        <div className="container mx-auto p-4 md:p-8 max-w-7xl font-primary space-y-8">
+        <div className="min-h-screen bg-slate-950 p-4 md:p-8">
+            <div className="max-w-6xl mx-auto space-y-8">
 
-            {/* ── Header ─────────────────────────────────────── */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                        <span className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shrink-0">
-                            <ShieldCheck className="w-5 h-5 text-white" />
-                        </span>
-                        Verifier Portal
-                    </h1>
-                    <p className="text-muted-foreground text-sm mt-1 ml-[52px]">
-                        Zero-Knowledge Proof verification · BBS+ Selective Disclosure
-                    </p>
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-teal-700 rounded-2xl flex items-center justify-center shadow-2xl shadow-emerald-500/20">
+                            <Search className="w-7 h-7 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-white font-black text-3xl tracking-tight">Verifier Portal</h1>
+                            <p className="text-slate-400 text-sm">Real-time Zero-Knowledge proof validation</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-slate-900/50 p-1.5 rounded-xl border border-white/10">
+                        <Button
+                            variant={verifyingMode === "id" ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => setVerifyingMode("id")}
+                            className="bg-transparent hover:bg-white/5 text-slate-400 h-8 font-bold text-[10px] uppercase"
+                        >
+                            ID Search
+                        </Button>
+                        <Button
+                            variant={verifyingMode === "qr" ? "secondary" : "ghost"}
+                            size="sm"
+                            onClick={() => setVerifyingMode("qr")}
+                            className="bg-transparent hover:bg-white/5 text-slate-400 h-8 font-bold text-[10px] uppercase"
+                        >
+                            QR Scan
+                        </Button>
+                    </div>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => { fetchHistory(); fetchStats(); }}>
-                    <RotateCcw className="w-4 h-4 mr-2" /> Refresh
-                </Button>
-            </div>
 
-            {/* ── Stats Row ─────────────────────────────────────── */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <StatCard
-                    label="Total Requests"
-                    value={stats?.totalRequests ?? 0}
-                    sub="All time"
-                    accent="border-t-blue-500"
-                />
-                <StatCard
-                    label="Verified"
-                    value={stats?.verified ?? 0}
-                    sub={`${stats?.successRate ?? 0}% success rate`}
-                    accent="border-t-green-500"
-                />
-                <StatCard
-                    label="Failed"
-                    value={stats?.failed ?? 0}
-                    sub="Proof rejected"
-                    accent="border-t-red-500"
-                />
-                <StatCard
-                    label="Pending"
-                    value={stats?.pending ?? 0}
-                    sub="Awaiting proof"
-                    accent="border-t-amber-500"
-                />
-            </div>
+                <div className="grid lg:grid-cols-2 gap-8">
 
-            {/* ── Main Grid ─────────────────────────────────────── */}
-            <div className="grid lg:grid-cols-5 gap-6">
-
-                {/* ── Left col: Create + QR ──────────────── */}
-                <div className="lg:col-span-2 space-y-5">
-
-                    {/* Create Request Card */}
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Play className="w-4 h-4 text-blue-600" />
-                                New Verification Request
-                            </CardTitle>
-                            <CardDescription>Select predicate and generate a QR code for the user&apos;s wallet.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium">Predicate</label>
-                                <Select value={predicateKey} onValueChange={setPredicateKey} disabled={!!activeRequest && !isTerminal}>
-                                    <SelectTrigger id="predicate-select">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {PREDICATE_OPTIONS.map(p => (
-                                            <SelectItem key={p.key} value={p.key}>
-                                                <span className="flex flex-col">
-                                                    <span>{p.label}</span>
-                                                </span>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-xs text-muted-foreground">{selectedPred.desc}</p>
+                    {/* 3A: Verification Input */}
+                    <div className="space-y-6">
+                        <Card className="bg-slate-900/50 border-white/10 overflow-hidden relative">
+                            <div className="absolute top-0 right-0 p-6 opacity-[0.03]">
+                                <Activity className="w-32 h-32 text-white" />
                             </div>
-
-                            {!activeRequest || isTerminal ? (
-                                <Button
-                                    id="generate-request-btn"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                                    onClick={handleCreateRequest}
-                                    disabled={creating}
-                                >
-                                    {creating
-                                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating…</>
-                                        : <><QrCode className="w-4 h-4 mr-2" /> Generate Verification Request</>
-                                    }
-                                </Button>
-                            ) : (
-                                <Button
-                                    id="cancel-request-btn"
-                                    variant="outline"
-                                    className="w-full text-muted-foreground"
-                                    onClick={handleReset}
-                                >
-                                    Cancel Request
-                                </Button>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* QR Card */}
-                    {activeRequest && (
-                        <Card className="overflow-hidden">
-                            <CardHeader className="pb-3 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-b">
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <QrCode className="w-4 h-4 text-blue-600" />
-                                    Scan QR to Verify
+                            <CardHeader>
+                                <CardTitle className="text-white flex items-center gap-2">
+                                    <ShieldCheck className="w-5 h-5 text-emerald-400" /> Start Verification
                                 </CardTitle>
-                                <p className="text-xs text-muted-foreground">
-                                    User scans this from their PrivaSeal Wallet
-                                </p>
+                                <CardDescription className="text-slate-400">
+                                    Query the PrivaSeal registry for a specific ID or scan.
+                                </CardDescription>
                             </CardHeader>
-                            <CardContent className="flex flex-col items-center gap-4 py-6">
-                                <QRPlaceholder uri={activeRequest.qrUri} size={168} />
-                                <div className="text-center space-y-1">
-                                    <p className="text-xs font-mono text-muted-foreground bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-lg border">
-                                        REQ·{shortId(activeRequest.id)}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        {activeRequest.predicateIcon} {activeRequest.predicateLabel}
-                                    </p>
-                                </div>
-
-                                {/* Demo mode: simulate wallet */}
-                                {canSimulate && (
-                                    <div className="w-full pt-2 border-t space-y-2">
-                                        <p className="text-center text-[11px] text-muted-foreground">
-                                            — Demo Mode —
-                                        </p>
+                            <CardContent className="space-y-6">
+                                {verifyingMode === "id" ? (
+                                    <form onSubmit={handleVerify} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Holder PrivaSeal ID</label>
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                                                <Input
+                                                    placeholder="e.g. PS-XXXX-XXXX"
+                                                    value={inputId}
+                                                    onChange={e => setInputId(e.target.value)}
+                                                    className="pl-10 bg-slate-950/50 border-white/10 text-white h-12 text-lg font-mono focus:border-emerald-500/50"
+                                                />
+                                            </div>
+                                        </div>
                                         <Button
-                                            id="simulate-proof-btn"
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
-                                            onClick={handleSimulateProof}
-                                            disabled={simulating}
+                                            type="submit"
+                                            disabled={isChecking}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-12 rounded-xl transition-all shadow-lg shadow-emerald-500/20"
                                         >
-                                            {simulating
-                                                ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" /> Verifying…</>
-                                                : <><Send className="w-3.5 h-3.5 mr-2" /> Simulate Wallet Proof</>
-                                            }
+                                            {isChecking ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Decrypting Proof...</> : "Verify Credential"}
+                                        </Button>
+                                    </form>
+                                ) : (
+                                    <div className="space-y-6 text-center py-8">
+                                        <div className="w-24 h-24 bg-slate-950 rounded-3xl border border-white/10 flex items-center justify-center mx-auto relative group flex-col gap-2 cursor-pointer hover:border-emerald-500/30 transition-all">
+                                            <Scan className="w-10 h-10 text-slate-500 group-hover:text-emerald-400 transition-colors" />
+                                            <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-white font-bold">Waiting for Scan...</p>
+                                            <p className="text-slate-500 text-xs px-12">Point camera at the holder's PrivaSeal Wallet QR code</p>
+                                        </div>
+                                        <Button onClick={() => handleVerify()} className="bg-slate-800 hover:bg-slate-700 text-slate-300">
+                                            Simulate Scan Result
                                         </Button>
                                     </div>
                                 )}
-
-                                {isTerminal && (
-                                    <Button
-                                        id="new-request-btn"
-                                        variant="outline"
-                                        size="sm"
-                                        className="w-full"
-                                        onClick={handleReset}
-                                    >
-                                        New Request
-                                    </Button>
-                                )}
                             </CardContent>
                         </Card>
-                    )}
-                </div>
 
-                {/* ── Right col: Status + History ────────── */}
-                <div className="lg:col-span-3 space-y-5">
-
-                    {/* Status Panel */}
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <Activity className="w-4 h-4 text-blue-600" />
-                                Verification Status
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {!activeRequest ? (
-                                <div className="flex flex-col items-center justify-center py-12 text-center">
-                                    <div className="w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-                                        <ShieldCheck className="w-7 h-7 text-gray-400" />
-                                    </div>
-                                    <p className="text-muted-foreground text-sm font-medium">No active request</p>
-                                    <p className="text-muted-foreground text-xs mt-1">Generate a verification request to begin</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-5">
-                                    {/* Status indicator */}
-                                    <div className={`flex items-center gap-3 p-4 rounded-xl border ${activeStatus!.color}`}>
-                                        <div className={`w-2.5 h-2.5 rounded-full ${activeStatus!.dotColor} shrink-0`} />
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 font-semibold">
-                                                {activeStatus!.icon}
-                                                {activeRequest.statusLabel}
-                                            </div>
-                                            {activeRequest.status === "waiting_proof" && (
-                                                <p className="text-xs mt-0.5 opacity-80">Polling every {POLL_INTERVAL / 1000}s…</p>
-                                            )}
-                                            {activeRequest.status === "verified" && activeRequest.proofHash && (
-                                                <p className="text-xs mt-0.5 font-mono opacity-80">Proof hash: #{activeRequest.proofHash}</p>
-                                            )}
-                                            {activeRequest.status === "failed" && activeRequest.errorMsg && (
-                                                <p className="text-xs mt-0.5 opacity-80">{activeRequest.errorMsg}</p>
-                                            )}
+                        {/* 3B: Verification Result Card */}
+                        <AnimatePresence>
+                            {result && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className={`rounded-3xl border p-8 flex items-center justify-between overflow-hidden relative ${result.result === "Verified"
+                                        ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-400"
+                                        : "bg-red-500/5 border-red-500/20 text-red-400"
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-6 relative z-10">
+                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${result.result === "Verified" ? "bg-emerald-600/20" : "bg-red-600/20"
+                                            }`}>
+                                            {result.result === "Verified"
+                                                ? <CheckCircle2 className="w-10 h-10" />
+                                                : <XCircle className="w-10 h-10" />
+                                            }
                                         </div>
-                                        {activeRequest.status === "waiting_proof" && (
-                                            <Loader2 className="w-4 h-4 animate-spin shrink-0 opacity-60" />
-                                        )}
-                                    </div>
-
-                                    {/* Request metadata */}
-                                    <div className="grid grid-cols-2 gap-3 text-sm">
-                                        {[
-                                            { label: "Request ID", value: `REQ·${shortId(activeRequest.id)}` },
-                                            { label: "Predicate", value: `${activeRequest.predicateIcon} ${activeRequest.predicateLabel}` },
-                                            { label: "Created", value: fmtDate(activeRequest.createdAt) },
-                                            { label: "Expires", value: fmtDate(activeRequest.expiresAt) },
-                                            ...(activeRequest.verifiedAt ? [
-                                                { label: "Resolved At", value: fmtDate(activeRequest.verifiedAt) }
-                                            ] : []),
-                                        ].map(({ label, value }) => (
-                                            <div key={label} className="bg-muted/40 rounded-lg px-3 py-2">
-                                                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">{label}</p>
-                                                <p className="font-medium text-foreground mt-0.5 truncate text-sm">{value}</p>
+                                        <div>
+                                            <div className="text-[10px] font-bold uppercase tracking-[0.3em] mb-1 opacity-60">Status Result</div>
+                                            <h3 className="text-3xl font-black tracking-tight mb-2">
+                                                {result.result.toUpperCase()}
+                                            </h3>
+                                            <div className="flex items-center gap-2 text-slate-400 text-xs">
+                                                <ShieldX className="w-3.5 h-3.5" /> Zero personal data revealed.
                                             </div>
-                                        ))}
+                                        </div>
                                     </div>
+                                    <div className="text-right relative z-10">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Checked At</p>
+                                        <p className="text-white font-mono text-sm">{new Date(result.timestamp).toLocaleTimeString()}</p>
+                                    </div>
+                                    <div className="absolute top-0 right-0 bottom-0 w-1/3 bg-gradient-to-l from-current opacity-[0.03] pointer-events-none" />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                                    {/* Step progress */}
-                                    <div className="space-y-2">
-                                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Verification Pipeline</p>
-                                        {[
-                                            { key: "waiting_proof", label: "Request Created", icon: <Zap className="w-3 h-3" /> },
-                                            { key: "proof_received", label: "Proof Received", icon: <Send className="w-3 h-3" /> },
-                                            { key: "verifying", label: "ZKP Verifying", icon: <Loader2 className="w-3 h-3" /> },
-                                            { key: "verified", label: "Result", icon: <ShieldCheck className="w-3 h-3" /> },
-                                        ].map((step, i) => {
-                                            const order = ["waiting_proof", "proof_received", "verifying", "verified", "failed"];
-                                            const cur = order.indexOf(activeRequest.status);
-                                            const me = order.indexOf(step.key);
-                                            const done = cur > me || activeRequest.status === "verified";
-                                            const active = cur === me;
-                                            const failed = activeRequest.status === "failed" && step.key === "verified";
-                                            return (
-                                                <div key={step.key} className="flex items-center gap-3">
-                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold border-2 transition-colors
-                                                        ${failed ? "bg-red-100 border-red-400 text-red-600" :
-                                                            done ? "bg-green-100 border-green-400 text-green-600" :
-                                                                active ? "bg-blue-100 border-blue-400 text-blue-600 animate-pulse" :
-                                                                    "bg-gray-100 border-gray-200 text-gray-400"}`}
-                                                    >
-                                                        {failed ? "✕" : done ? "✓" : i + 1}
-                                                    </div>
-                                                    <span className={`text-sm ${done || active ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-                                                        {step.label}
-                                                        {failed && <span className="text-red-500 ml-2">Failed</span>}
-                                                    </span>
+                        {/* Principle Placeholder */}
+                        {!result && !isChecking && (
+                            <div className="bg-slate-900/30 border border-dashed border-white/10 rounded-3xl p-12 text-center flex flex-col items-center justify-center gap-4">
+                                <Info className="w-8 h-8 text-slate-700" />
+                                <p className="text-slate-500 text-sm max-w-[240px]">Search for a PrivaSeal ID or scan a QR to view verification results.</p>
+                            </div>
+                        )}
+                        {isChecking && (
+                            <div className="bg-slate-900/30 border border-white/10 rounded-3xl p-16 text-center animate-pulse flex flex-col items-center justify-center gap-4">
+                                <RefreshCcw className="w-8 h-8 text-emerald-600 animate-spin" />
+                                <p className="text-slate-400 font-medium">Validating BBS+ Proof...</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 3C: Verification History Table */}
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-2">
+                            <h3 className="text-white font-bold text-xl flex items-center gap-2">
+                                <History className="w-5 h-5 text-slate-400" /> Recent History
+                            </h3>
+                            <div className="flex gap-2">
+                                <Button variant="ghost" size="sm" className="text-slate-500 hover:text-white px-2 h-8">
+                                    <Filter className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-900/50 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-xl">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="bg-white/5 border-b border-white/10">
+                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">ID</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                                        <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {verificationLogs.map((log) => (
+                                        <tr key={log.id} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <p className="text-white font-mono text-xs">{log.checkedId}</p>
+                                                <p className="text-[10px] text-slate-500">{log.type}</p>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <Badge variant="outline" className={`
+                                                    ${log.result === "Verified"
+                                                        ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
+                                                        : "text-red-400 border-red-500/20 bg-red-500/5"}
+                                                `}>
+                                                    {log.result}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1.5 text-slate-500 text-[10px] font-medium">
+                                                    <Clock className="w-3 h-3" /> {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* History Table */}
-                    <Card>
-                        <CardHeader className="pb-3 flex flex-row items-center justify-between">
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <History className="w-4 h-4 text-blue-600" />
-                                Verification History
-                            </CardTitle>
-                            <span className="text-xs text-muted-foreground">{history.length} record{history.length !== 1 ? "s" : ""}</span>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            {histLoading ? (
-                                <div className="flex items-center justify-center py-12 gap-2 text-muted-foreground">
-                                    <Loader2 className="w-4 h-4 animate-spin" /> Loading…
-                                </div>
-                            ) : history.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-center">
-                                    <BarChart3 className="w-8 h-8 text-gray-300 mb-2" />
-                                    <p className="text-sm text-muted-foreground">No verification history yet.</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Create a request above to get started.</p>
-                                </div>
-                            ) : (
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow className="text-xs uppercase tracking-wider">
-                                                <TableHead>Request ID</TableHead>
-                                                <TableHead>Predicate</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead>Created</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {history.map(req => {
-                                                const sc = statusConfig(req.status);
-                                                return (
-                                                    <TableRow
-                                                        key={req.id}
-                                                        className={`hover:bg-muted/30 transition-colors ${req.id === activeRequest?.id ? "bg-blue-50/50 dark:bg-blue-900/10" : ""}`}
-                                                    >
-                                                        <TableCell>
-                                                            <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded" title={req.id}>
-                                                                REQ·{shortId(req.id)}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <span className="text-sm">{req.predicateIcon} {req.predicateLabel}</span>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full border ${sc.color}`}>
-                                                                {sc.icon}
-                                                                {sc.label}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                                                            {fmtDate(req.createdAt)}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
                 </div>
             </div>
-
         </div>
+    );
+}
+
+export default function VerifierPortal() {
+    return (
+        <RoleGuard allowedRoles={["admin", "verifier", "user"]}>
+            <VerifierPortalContent />
+        </RoleGuard>
     );
 }

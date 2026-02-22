@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.issuer.routes import router as issuer_router
 from app.api.verifier.routes import router as verifier_router
+from app.api.privaseal.routes import router as privaseal_router
 
 # Use standard Python logging instead of structlog
 logging.basicConfig(
@@ -46,8 +47,9 @@ except ImportError as e:
     logger.warning(f"Legacy routes not loaded: {e}")
 
 # ── New PrivaSeal routes ──────────────────────────────────────────────────────
-app.include_router(issuer_router, prefix="/api/issuer", tags=["Issuer"])
-app.include_router(verifier_router, prefix="/api/verifier", tags=["Verifier"])
+app.include_router(issuer_router,    prefix="/api/issuer",    tags=["Issuer"])
+app.include_router(verifier_router,  prefix="/api/verifier",  tags=["Verifier"])
+app.include_router(privaseal_router, prefix="/api/privaseal", tags=["PrivaSeal"])
 
 # ── Benchmark routes ──────────────────────────────────────────────────────────
 try:
