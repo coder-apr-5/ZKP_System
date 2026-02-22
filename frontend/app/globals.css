@@ -6,32 +6,20 @@
   :root {
     /* Primary Colors - PrivaSeal Branding */
     --privaseal-blue: #2563EB;
-    /* Primary action color, trust */
     --privaseal-blue-light: #3B82F6;
-    /* Hover states */
     --privaseal-blue-dark: #1E40AF;
-    /* Active states */
     --privaseal-blue-pale: #DBEAFE;
-    /* Backgrounds */
 
     --privaseal-green: #10B981;
-    /* Success, verified */
     --privaseal-green-light: #34D399;
-    /* Hover states */
     --privaseal-green-dark: #059669;
-    /* Active states */
     --privaseal-green-pale: #D1FAE5;
-    /* Backgrounds */
 
     /* Status Colors */
     --status-success: #10B981;
-    /* Verified, active */
     --status-warning: #F59E0B;
-    /* Expiring soon */
     --status-error: #EF4444;
-    /* Expired, failed */
     --status-info: #3B82F6;
-    /* Informational */
 
     /* Neutral Colors */
     --gray-50: #F9FAFB;
@@ -75,7 +63,7 @@
     --transition-normal: 250ms ease-in-out;
     --transition-slow: 400ms ease-in-out;
 
-    /* Shadcn Mappings (using PrivaSeal colors) */
+    /* Shadcn Mappings */
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
     --card: 0 0% 100%;
@@ -83,10 +71,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
     --primary: 221 83% 53%;
-    /* #2563EB converted to HSL roughly */
     --primary-foreground: 210 40% 98%;
     --secondary: 158 84% 39%;
-    /* #10B981 converted to HSL roughly */
     --secondary-foreground: 210 40% 98%;
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
@@ -97,7 +83,6 @@
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 221 83% 53%;
-    /* Primary color */
     --radius: 0.5rem;
   }
 
@@ -122,6 +107,24 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 221 83% 53%;
   }
+
+  .premium-dark {
+    --background: 222 47% 2%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 4%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222 47% 4%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 221 83% 53%;
+    --secondary: 160 84% 39%;
+    --muted: 222 47% 10%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 221 83% 53%;
+    --accent-foreground: 210 40% 98%;
+    --border: 222 47% 12%;
+    --input: 222 47% 12%;
+    --ring: 221 83% 53%;
+  }
 }
 
 @layer base {
@@ -132,4 +135,60 @@
   body {
     @apply bg-background text-foreground font-primary;
   }
+}
+
+@layer utilities {
+  .bg-noise {
+    background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+    opacity: 0.05;
+  }
+
+  .glass-card {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-cyan-400 to-emerald-400;
+  }
+
+  .bg-glow-blob {
+    @apply absolute blur-[120px] opacity-40 rounded-full animate-pulse;
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-20px) rotate(2deg);
+  }
+
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+.animate-glow {
+  animation: pulse-glow 8s ease-in-out infinite;
 }

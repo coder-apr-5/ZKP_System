@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Inter, Fira_Code } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { AuthProvider } from "@/context/AuthContext";
+import { ClientLayout } from "@/components/ClientLayout";
+import { DemoProvider } from "@/context/DemoContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,12 +46,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${firaCode.variable} font-primary antialiased bg-gray-50 text-gray-900 min-h-screen`}
       >
-        {children}
-        <Toaster />
+        {/* AuthProvider wraps the entire app — Firebase session persists globally */}
+        <AuthProvider>
+          <DemoProvider>
+            <ClientLayout>
+              {children}
+            </ClientLayout>
+          </DemoProvider>
+          <Toaster />
+        </AuthProvider>
       </body>
     </html>
   );
